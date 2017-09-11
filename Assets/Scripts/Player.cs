@@ -1,8 +1,19 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Player : Character {
-	
+public class Player : MonoBehaviour {
+
+	// movement variables
+	public float maxSpeed;
+	bool facingRight;
+
+	// jumping variables
+	bool grounded = false;
+	float groundCheckRadius = 0.2f;
+	public LayerMask groundLayer;
+	public Transform groundCheck;
+	public float jumpHeight;
+
 	private Animator animator;
 
 	private Rigidbody2D rigidbody2D;
@@ -10,34 +21,47 @@ public class Player : Character {
 	void Start () {
 		animator = GetComponent<Animator> ();
 		rigidbody2D = GetComponent<Rigidbody2D> ();
+		facingRight = true;
 	}
 
-	protected override void Update () {
-		GetInput ();
+	void Update (){
+		if (grounded && Input.GetAxis ("Jump") > 0) {
+			grounded = false; //p/ nao pular no ar
+			animator.SetBool ("isGrounded", grounded);
+			rigidbody2D.AddForce(new Vector2(0, jumpHeight));
+		}
 
-		base.Update ();
+		// slide
+		bool slide = Input.GetButtonDown ("Slide");
+		animator.SetBool ("slide", slide);
+
 	}
 
-	public void GetInput(){
-		
-		direction = Vector2.zero;
-		bool attack = Input.GetButton ("Attack");
-		if (attack)
-			animator.SetTrigger ("attack");
-		animator.SetTrigger ("idle");
+	void FixedUpdate () {
 
-		bool jump = Input.GetButtonDown ("Jump");
-		if (jump)
-			rigidbody2D.AddForce(new Vector2(0, 4), ForceMode2D.Impulse);
-		/*
-		bool run_left = Input.GetKey (KeyCode.LeftArrow);
-		bool run_right = Input.GetKey (KeyCode.RightArrow);
-		if (run_right) {
-			direction += Vector2.left;
+		// check if grounded
+		grounded = Physics2D.OverlapCircle (groundCheck.position, groundCheckRadius, groundLayer);
+		animator.SetBool ("isGrounded", grounded);
+
+		animator.SetFloat ("verticalSpeed", rigidbody2D.velocity.y);
+
+		// move
+		float move = Input.GetAxis ("Horizontal");
+		animator.SetFloat ("speed", Mathf.Abs (move));
+
+		rigidbody2D.velocity = new Vector2 (move * maxSpeed, rigidbody2D.velocity.y);
+
+		if (move > 0 && !facingRight) {
+			flip ();
+		} else if (move < 0 && facingRight) {
+			flip ();
 		}
-		if (run_left) {
-			direction += Vector2.right;
-		}
-		animator.SetBool ("run", run_left);*/
+	}
+
+	void flip() {
+		facingRight = !facingRight;
+		Vector3 theScale = transform.localScale;
+		theScale.x *= -1;
+		transform.localScale = theScale;
 	}
 }
